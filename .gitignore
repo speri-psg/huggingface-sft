@@ -1,0 +1,16 @@
+# Data files
+*.csv
+
+# Virtual environment
+.venv/
+
+# IDE
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+
+# HuggingFace cache
+*.safetensors
+*.bin
