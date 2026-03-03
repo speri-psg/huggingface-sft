@@ -129,6 +129,81 @@ LORA_TARGET_MODULES = "all-linear"
 | 4 | Custom collator, separate images column | Stuck at ~13-14 |
 | 5 | **Prompt masking in labels** | **Dropping to ~2.0** |
 
+## Training Results
+
+Final training: **2000 steps, average loss 5.86** over 10 epochs (~83 minutes on vast.ai with 32GB VRAM).
+
+## Inference Results
+
+Tested on 5 samples from the held-out test set:
+
+### Sample 10 — Simple receipt (100% match)
+
+**Ground Truth:**
+```json
+{
+  "menu": {"nm": "CINNAMON SUGAR", "unitprice": "17,000", "cnt": "1 x", "price": "17,000"},
+  "sub_total": {"subtotal_price": "17,000"},
+  "total": {"total_price": "17,000", "cashprice": "20,000", "changeprice": "3,000"}
+}
+```
+
+**Model Prediction:** Identical — perfect match.
+
+### Sample 20 — Complex receipt with 5 items (100% match)
+
+**Ground Truth:**
+```json
+{
+  "menu": [
+    {"nm": "cashew nuts chkn", "cnt": "1", "price": "64,500"},
+    {"nm": "garlic pepper beef", "cnt": "1", "price": "79,500"},
+    {"nm": "red curry beef", "cnt": "1", "price": "69,500"},
+    {"nm": "phad thai", "cnt": "1", "price": "64,500"},
+    {"nm": "steamed rice", "cnt": "4", "price": "47,600"}
+  ],
+  "sub_total": {"subtotal_price": "325,600", "service_price": "17,908", "tax_price": "34,351"},
+  "total": {"total_price": "377,859"}
+}
+```
+
+**Model Prediction:** Identical — all 5 menu items, subtotals, service charge, tax, and total perfectly extracted.
+
+### Sample 15 — Multi-item receipt (~99% match)
+
+**Ground Truth:**
+```json
+{
+  "menu": [
+    {"nm": "Lemon Tea (L)", "cnt": "1", "price": "25.000"},
+    {"nm": "Caramel Small", "cnt": "1", "price": "38.000"}
+  ],
+  "total": {"total_price": "63.000", "cashprice": "70.000", "changeprice": "7.000"}
+}
+```
+
+**Model Prediction:** Near-perfect — only difference was `7,000` vs `7.000` (comma vs dot in change price).
+
+### Sample 5 — Simple receipt (~95% match)
+
+Prediction matched all values. Only missing field: `menuqty_cnt` in total.
+
+### Sample 0 — Receipt with discounts (~90% match)
+
+Minor structural difference in menu (split into 2 items instead of 1) and `creditcardprice` predicted as `emoneyprice`. All numerical values correct.
+
+### Summary
+
+| Sample | Complexity | Accuracy |
+|--------|-----------|----------|
+| #0 | Moderate (discount) | ~90% |
+| #5 | Simple | ~95% |
+| #10 | Simple | 100% |
+| #15 | Multi-item | ~99% |
+| #20 | Complex (5 items + service) | 100% |
+
+The model learned structured JSON receipt parsing from just 800 training samples in 10 epochs. Complex receipts with multiple items, taxes, and service charges are handled correctly.
+
 ## Lessons Learned
 
 1. **Label masking is essential for VLM fine-tuning** — without it, loss is dominated by unpredictable prompt/image tokens and the model appears not to learn.
